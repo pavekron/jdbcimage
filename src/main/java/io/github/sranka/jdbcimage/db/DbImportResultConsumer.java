@@ -35,6 +35,7 @@ import java.util.function.Consumer;
 public class DbImportResultConsumer implements ResultConsumer<RowData> {
     private static final Log log = LogFactory.getLog(DbImportResultConsumer.class);
     public static int BATCH_SIZE = Integer.parseInt(System.getProperty("batch.size", "100"));
+    private BinaryZerosRemover binaryZerosRemover = new BinaryZerosRemover();
 
     private final String tableName;
     private final Connection con;
@@ -148,11 +149,11 @@ public class DbImportResultConsumer implements ResultConsumer<RowData> {
                                 break;
                             case Types.CHAR:
                             case Types.VARCHAR:
-                                stmt.setString(pos, (String) value);
+                                stmt.setString(pos, binaryZerosRemover.removeBinaryZeros((String)value));
                                 break;
                             case Types.NCHAR:
                             case Types.NVARCHAR:
-                                stmt.setNString(pos, (String) value);
+                                stmt.setNString(pos, binaryZerosRemover.removeBinaryZeros((String)value));
                                 break;
                             case Types.DATE:
                                 stmt.setDate(pos, (Date) value);
@@ -208,16 +209,16 @@ public class DbImportResultConsumer implements ResultConsumer<RowData> {
                             case Types.CLOB:
                             case Types.LONGNVARCHAR:
                             case Types.NCLOB:
-                                if (value instanceof Reader) {
-                                    value = db.convertCharacterStreamInput((Reader) value);
-                                    if (value instanceof ChunkedReader) {
-                                        stmt.setCharacterStream(pos, (Reader) value, ((ChunkedReader) value).length());
-                                    } else if (value instanceof Reader) {
-                                        stmt.setCharacterStream(pos, (Reader) value);
-                                    } else if (value instanceof CharSequence) {
-                                        stmt.setString(pos, value.toString());
-                                    } else {
-                                        throw new IllegalStateException("Unexpected value found for clob: " + value);
+                                if (value instanceof Reader){
+                                    value = db.convertCharacterStreamInput((Reader)value);
+                                    if (value instanceof ChunkedReader){
+                                        stmt.setCharacterStream(pos, (Reader)value, ((ChunkedReader)value).length());
+                                    } else if (value instanceof Reader ){
+                                        stmt.setCharacterStream(pos, (Reader)value);
+                                    } else if (value instanceof CharSequence){
+                                        stmt.setString(pos, binaryZerosRemover.removeBinaryZeros(value.toString()));
+                                    } else{
+                                        throw new IllegalStateException("Unexpected value found for clob: "+value);
                                     }
                                 } else if (value instanceof Clob) {
                                     if (type == Types.LONGNVARCHAR || type == Types.NCLOB) {
