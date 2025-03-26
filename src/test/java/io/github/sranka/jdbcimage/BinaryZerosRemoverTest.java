@@ -1,4 +1,4 @@
-package pz.tool.jdbcimage.db;
+package io.github.sranka.jdbcimage.db;
 
 import org.junit.Test;
 
